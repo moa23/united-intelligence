@@ -9,7 +9,18 @@ from app.agent.tools import get_recent_match_analysis
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def get_openai_client() -> OpenAI:
+    """Create the OpenAI client when the agent is called."""
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY is missing from the environment."
+        )
+
+    return OpenAI(api_key=api_key)
+
 
 TOOLS = [
     {
@@ -55,6 +66,8 @@ MAX_TOOL_ROUNDS = 5
 
 
 def ask_agent(question: str) -> str:
+    client = get_openai_client()
+
     response = client.responses.create(
         model="gpt-4.1-mini",
         instructions=INSTRUCTIONS,

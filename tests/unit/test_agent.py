@@ -1,7 +1,10 @@
 
+import json
 from types import SimpleNamespace
 from unittest.mock import Mock
+
 import pytest
+
 from app.agent import assistant
 
 
@@ -21,9 +24,7 @@ def test_agent_calls_tool_and_returns_final_answer(monkeypatch):
 
     final_response = SimpleNamespace(
         id="response_2",
-        output=[
-            SimpleNamespace(type="message")
-        ],
+        output=[SimpleNamespace(type="message")],
         output_text="Manchester United scoret 10 mål.",
     )
 
@@ -33,7 +34,11 @@ def test_agent_calls_tool_and_returns_final_answer(monkeypatch):
         final_response,
     ]
 
-    monkeypatch.setattr(assistant, "client", fake_openai)
+    monkeypatch.setattr(
+        assistant,
+        "get_openai_client",
+        lambda: fake_openai,
+    )
 
     fake_analysis = {
         "team": "Manchester United",
@@ -48,14 +53,20 @@ def test_agent_calls_tool_and_returns_final_answer(monkeypatch):
     )
 
     answer = assistant.ask_agent(
-        "Hvor mange mål scoret Manchester United?"
+        "Hvor mange mål scoret United i de siste 10 kampene?"
     )
 
     assert answer == "Manchester United scoret 10 mål."
     fake_tool.assert_called_once_with(limit=10)
-    assert fake_openai.responses.create.call_count == 2
 
+    calls = fake_openai.responses.create.call_args_list
+    assert len(calls) == 2
 
+    submitted_outputs = calls[1].kwargs["input"]
+    assert submitted_outputs[0]["call_id"] == "call_1"
+
+    tool_result = json.loads(submitted_outputs[0]["output"])
+    assert tool_result == fake_analysis
 
 
 def test_agent_rejects_invalid_tool_limit(monkeypatch):
@@ -74,7 +85,12 @@ def test_agent_rejects_invalid_tool_limit(monkeypatch):
 
     fake_openai = Mock()
     fake_openai.responses.create.return_value = invalid_response
-    monkeypatch.setattr(assistant, "client", fake_openai)
+
+    monkeypatch.setattr(
+        assistant,
+        "get_openai_client",
+        lambda: fake_openai,
+    )
 
     fake_tool = Mock()
     monkeypatch.setattr(
@@ -83,7 +99,10 @@ def test_agent_rejects_invalid_tool_limit(monkeypatch):
         fake_tool,
     )
 
-    with pytest.raises(ValueError, match="between 1 and 20"):
+    with pytest.raises(
+        ValueError,
+        match="between 1 and 20",
+    ):
         assistant.ask_agent("Analyser 100 kamper")
 
     fake_tool.assert_not_called()
