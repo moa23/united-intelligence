@@ -34,6 +34,8 @@ The project demonstrates how to build an AI application that combines external A
 
 ## Architecture
 
+See the [architecture documentation](docs/architecture.md) for the system diagram and request flow.
+
 1. The client sends a request to the FastAPI backend.
 2. The backend retrieves match data from API-Football.
 3. The analysis service calculates team performance statistics.
