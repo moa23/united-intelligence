@@ -1,6 +1,8 @@
+
 fastapi
 uvicorn[standard]
 httpx
 pydantic-settings
 python-dotenv
+openai==3.37.0
 pytest
