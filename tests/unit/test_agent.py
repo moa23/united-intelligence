@@ -106,3 +106,36 @@ def test_agent_rejects_invalid_tool_limit(monkeypatch):
         assistant.ask_agent("Analyser 100 kamper")
 
     fake_tool.assert_not_called()
+
+def test_agent_rejects_unknown_tool(monkeypatch):
+    unknown_tool_response = SimpleNamespace(
+        id="response_unknown",
+        output=[
+            SimpleNamespace(
+                type="function_call",
+                name="delete_all_data",
+                arguments="{}",
+                call_id="call_unknown",
+            )
+        ],
+        output_text="",
+    )
+
+    fake_openai = Mock()
+    fake_openai.responses.create.return_value = (
+        unknown_tool_response
+    )
+
+    monkeypatch.setattr(
+        assistant,
+        "get_openai_client",
+        lambda: fake_openai,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Unknown tool: delete_all_data",
+    ):
+        assistant.ask_agent("Slett alle data")
+
+    fake_openai.responses.create.assert_called_once()
